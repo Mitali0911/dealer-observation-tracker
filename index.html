@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Dealer Observation Tracker</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f4f4;
+      padding: 20px;
+    }
+
+    h2, h3 {
+      text-align: center;
+    }
+
+    form {
+      max-width: 850px;
+      margin: auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+
+    .form-group {
+      margin-bottom: 15px;
+    }
+
+    label {
+      display: block;
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+
+    input, textarea, select {
+      width: 100%;
+      padding: 10px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+
+    button {
+      margin-right: 10px;
+      padding: 10px 20px;
+      font-size: 16px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    #submitBtn {
+      background-color: #28a745;
+      color: white;
+    }
+
+    #downloadBtn {
+      background-color: #007bff;
+      color: white;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 30px;
+    }
+
+    th, td {
+      border: 1px solid #ccc;
+      padding: 10px;
+      text-align: center;
+    }
+
+    th {
+      background-color: #eee;
+    }
+  </style>
+</head>
+<body>
+
+<h2>Dealer Observation Tracker Report</h2>
+
+<form id="trackerForm">
+  <div class="form-group">
+    <label for="branchCode">Branch Code (Alphanumeric)</label>
+    <input type="text" id="branchCode" pattern="[A-Za-z0-9]+" title="Only letters and numbers allowed" required>
+  </div>
+
+  <div class="form-group">
+    <label for="branchManager">Branch Manager</label>
+    <input type="text" id="branchManager" pattern="[A-Za-z ]+" title="Only letters and spaces allowed" required>
+  </div>
+
+  <div class="form-group">
+    <label for="zonalManager">Zonal Manager</label>
+    <input type="text" id="zonalManager" pattern="[A-Za-z ]+" title="Only letters and spaces allowed" required>
+  </div>
+
+  <div class="form-group">
+    <label for="observationSubject">Observation Subject</label>
+    <input type="text" id="observationSubject" pattern="[A-Za-z ]+" title="Only letters and spaces allowed" required>
+  </div>
+
+  <div class="form-group">
+    <label for="sentDate">Sent Date</label>
+    <input type="date" id="sentDate" required>
+  </div>
+
+  <div class="form-group">
+    <label for="replyDate">Reply Received Date</label>
+    <input type="date" id="replyDate" required>
+  </div>
+
+  <div class="form-group">
+    <label for="daysTaken">Number of Days Taken to Reply (Auto)</label>
+    <input type="number" id="daysTaken" readonly>
+  </div>
+
+  <div class="form-group">
+    <label for="replyMail">Reply Mail Summary</label>
+    <textarea id="replyMail" rows="3" pattern="[A-Za-z0-9 ,.()!?\r\n-]+" title="Only valid characters allowed" required></textarea>
+  </div>
+
+  <div class="form-group">
+    <label for="actionTaken">Action Taken</label>
+    <select id="actionTaken" required>
+      <option value="">Select</option>
+      <option value="Yes">Yes</option>
+      <option value="No">No</option>
+    </select>
+  </div>
+
+  <div class="form-group">
+    <label for="branchActive">Is Branch Active?</label>
+    <select id="branchActive" required>
+      <option value="">Select</option>
+      <option value="Active">Active</option>
+      <option value="Inactive">Inactive</option>
+    </select>
+  </div>
+
+  <div class="form-group">
+    <label for="screenshotCaptured">Was Screenshot Captured?</label>
+    <select id="screenshotCaptured" required>
+      <option value="">Select</option>
+      <option value="Yes">Yes</option>
+      <option value="No">No</option>
+    </select>
+  </div>
+
+  <div class="form-group">
+    <label for="screenshotUpload">Upload Screenshot (filename will be shown)</label>
+    <input type="file" id="screenshotUpload" accept=".png, .jpg, .jpeg">
+  </div>
+
+  <button type="submit" id="submitBtn">Submit</button>
+  <button type="button" id="downloadBtn">Download Excel</button>
+</form>
+
+<h3>Saved Observations</h3>
+<table id="dataTable">
+  <thead>
+    <tr>
+      <th>Branch Code</th>
+      <th>Branch Manager</th>
+      <th>Zonal Manager</th>
+      <th>Subject</th>
+      <th>Sent Date</th>
+      <th>Reply Date</th>
+      <th>Days Taken</th>
+      <th>Reply Summary</th>
+      <th>Action Taken</th>
+      <th>Status</th>
+      <th>Screenshot?</th>
+      <th>Screenshot Link</th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+</table>
+
+<script>
+  let reportData = [];
+
+  // Auto-calculate days
+  document.getElementById("replyDate").addEventListener("change", calculateDays);
+  document.getElementById("sentDate").addEventListener("change", calculateDays);
+
+  function calculateDays() {
+    let sent = new Date(document.getElementById("sentDate").value);
+    let reply = new Date(document.getElementById("replyDate").value);
+    if (sent && reply && reply >= sent) {
+      let diff = Math.floor((reply - sent) / (1000 * 60 * 60 * 24));
+      document.getElementById("daysTaken").value = diff;
+    } else {
+      document.getElementById("daysTaken").value = '';
+    }
+  }
+
+  // Prevent numeric input for string fields
+  ['branchManager', 'zonalManager', 'observationSubject'].forEach(id => {
+    document.getElementById(id).addEventListener("input", function () {
+      this.value = this.value.replace(/[^A-Za-z ]/g, '');
+    });
+  });
+
+  // Form submit
+  document.getElementById("trackerForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+
+    const bm = document.getElementById("branchManager").value.trim();
+    const zm = document.getElementById("zonalManager").value.trim();
+
+    if (bm === zm) {
+      alert("Branch Manager and Zonal Manager must be different!");
+      return;
+    }
+
+    const fileInput = document.getElementById("screenshotUpload").files[0];
+    const screenshotPath = fileInput
+      ? `C:/Users/mital/OneDrive/Documents/ScreenShot/${fileInput.name}`
+      : "";
+
+    const data = {
+      "Branch Code": document.getElementById("branchCode").value,
+      "Branch Manager": bm,
+      "Zonal Manager": zm,
+      "Observation Subject": document.getElementById("observationSubject").value,
+      "Sent Date": document.getElementById("sentDate").value,
+      "Reply Date": document.getElementById("replyDate").value,
+      "Days Taken": document.getElementById("daysTaken").value,
+      "Reply Mail": document.getElementById("replyMail").value,
+      "Action Taken": document.getElementById("actionTaken").value,
+      "Branch Status": document.getElementById("branchActive").value,
+      "Screenshot Captured": document.getElementById("screenshotCaptured").value,
+      "Screenshot Path": screenshotPath
+    };
+
+    reportData.push(data);
+    appendToTable(data);
+    alert("Report saved successfully!");
+    this.reset();
+    document.getElementById("daysTaken").value = '';
+  });
+
+  // Append row to table
+  function appendToTable(data) {
+    const table = document.querySelector("#dataTable tbody");
+    const row = table.insertRow();
+    for (let key in data) {
+      const cell = row.insertCell();
+      if (key === "Screenshot Path" && data[key]) {
+        const link = document.createElement("a");
+        link.href = data[key];
+        link.innerText = "View Screenshot";
+        link.target = "_blank";
+        cell.appendChild(link);
+      } else {
+        cell.textContent = data[key];
+      }
+    }
+  }
+
+  // Download CSV
+  document.getElementById("downloadBtn").addEventListener("click", function () {
+    if (reportData.length === 0) {
+      alert("No data to download!");
+      return;
+    }
+
+    const headers = Object.keys(reportData[0]).join(",") + "\n";
+    const rows = reportData.map(obj => Object.values(obj).map(v => `"${v}"`).join(",")).join("\n");
+    const csv = headers + rows;
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "DealerObservationReport.csv";
+    link.click();
+  });
+</script>
+
+</body>
+</html>
